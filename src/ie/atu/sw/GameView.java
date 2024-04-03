@@ -383,7 +383,7 @@ public class GameView extends JPanel implements ActionListener{
 
 	public void sampleAndSave(String dataFilename, String expectedFilename) {
 	    double[] gameState = sample(); // Use your existing sample method to get the current game state.
-	    int actionTaken = lastAction; // Last action taken by the autopilot.
+	    int shipMovement = lastAction; // Last action taken by the autopilot.
 
 	    try (FileWriter dataWriter = new FileWriter(dataFilename, true);
 	         FileWriter expectedWriter = new FileWriter(expectedFilename, true)) {
@@ -394,8 +394,10 @@ public class GameView extends JPanel implements ActionListener{
 	        }
 	        dataWriter.write("\n");
 
-	        // Writing the action taken to the expected output file.
-	        expectedWriter.write(actionTaken + "\n");
+	     // Writing the action taken to the expected output file.
+	        expectedWriter.write(shipMovement + "\n");
+	        shipMovement = 0; // Reset shipMovement if necessary after logging
+
 
 	    } catch (IOException e) {
 	        e.printStackTrace();
