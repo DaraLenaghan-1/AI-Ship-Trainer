@@ -22,6 +22,11 @@ import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.File;
 
+import jhealy.aicme4j.net.Aicme4jUtils;
+import jhealy.aicme4j.net.NeuralNetwork;
+import jhealy.aicme4j.net.Output;
+
+
 public class GameView extends JPanel implements ActionListener{
 	//Some constants
 	private static final long serialVersionUID	= 1L;
@@ -40,6 +45,10 @@ public class GameView extends JPanel implements ActionListener{
 	/*
 	 * The 30x20 game grid is implemented using a linked list of 
 	 * 30 elements, where each element contains a byte[] of size 20. 
+	 * 
+	 * private int shipMovement = 0; -- move,sample,save
+	
+		public NeuralNetwork nn; - use to move ship -- automove 
 	 */
 	private LinkedList<byte[]> model = new LinkedList<>();
 
@@ -66,6 +75,9 @@ public class GameView extends JPanel implements ActionListener{
 	private int lastAction = 0; // -1 for up, 1 for down, 0 for stay
 	
 	private boolean auto;
+	
+	  private int shipMovement = 0; // Track ship movement direction
+	  private NeuralNetwork nn; // Neural network for decision making
 
 	public GameView(boolean auto) throws Exception{
 		this.auto = true; //Use the autopilot - was set to auto
@@ -84,6 +96,14 @@ public class GameView extends JPanel implements ActionListener{
     	
 		timer = new Timer(TIMER_INTERVAL, this); //Timer calls actionPerformed() every second
 		timer.start();
+		
+		try {
+            // Load the neural network model
+            String modelPath = "../resources/trainedShipModel.data"; // -- NEEDS TO CHANGE
+            nn = Aicme4jUtils.load(modelPath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 	}
 	
 	//Build our game grid
@@ -169,8 +189,16 @@ public class GameView extends JPanel implements ActionListener{
 	 *  
 	 */
 	private void autoMove() {
-		move(current().nextInt(-1, 2)); //Move -1 (up), 0 (nowhere), 1 (down)
+	    try {
+	        double[] gameState = sample();
+	        double step = nn.process(gameState, Output.NUMERIC_ROUNDED);
+	        move((int) Math.round(step)); // Cast to int as move accepts an int
+	        shipMovement = (int) Math.round(step); // Update shipMovement with the action taken
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
 	}
+
 
 	
 	//Called every second by the timer 
@@ -350,6 +378,27 @@ public class GameView extends JPanel implements ActionListener{
 	    } catch (IOException e) {
 	        System.err.println("An error occurred while writing to the file."); // Log to standard error
 	        e.printStackTrace(System.err); // Print stack trace to standard error
+	    }
+	}
+
+	public void sampleAndSave(String dataFilename, String expectedFilename) {
+	    double[] gameState = sample(); // Use your existing sample method to get the current game state.
+	    int actionTaken = lastAction; // Last action taken by the autopilot.
+
+	    try (FileWriter dataWriter = new FileWriter(dataFilename, true);
+	         FileWriter expectedWriter = new FileWriter(expectedFilename, true)) {
+	        
+	        // Writing the game state to the data file.
+	        for (double feature : gameState) {
+	            dataWriter.write(feature + ",");
+	        }
+	        dataWriter.write("\n");
+
+	        // Writing the action taken to the expected output file.
+	        expectedWriter.write(actionTaken + "\n");
+
+	    } catch (IOException e) {
+	        e.printStackTrace();
 	    }
 	}
 
